@@ -11,5 +11,8 @@
 
 ## How to run this project
 1. Install uv ```brew install uv```
-3. Install dependencies ```uv sync```
-3. Run the app ```uv run main.py```
+2. Install dependencies ```uv sync```
+3. Add an .env file with the following environment variables:
+- FRONTIER_MODEL_URL=<your-model-provider-domain-name> (https://api.openai.com)
+- FRONTIER_MODEL=<your-selected-model> (gpt-4o-mini)
+4. Run the app ```uv run main.py```
