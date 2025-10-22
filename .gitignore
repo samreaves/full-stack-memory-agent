@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / compiled files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.env/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.whl
+
+# Editor/IDE specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Test and Coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# Logs and databases
+*.log
+*.sqlite3
