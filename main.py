@@ -1,10 +1,12 @@
 from fastapi import FastAPI
-from chat import router
+from chat import router as chat_router
+from health import router as health_router
 import uvicorn
 
 app = FastAPI()
 
-app.include_router(router, prefix="/chat")
+app.include_router(chat_router, prefix="/chat")
+app.include_router(health_router, prefix="/health")
 
 @app.get("/")
 async def root():
