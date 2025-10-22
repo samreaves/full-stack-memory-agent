@@ -9,3 +9,7 @@
 1. Add Svelte UI for lightweight chat client
 2. Embed meanings and store them in vector db. Adjust model prompts with additional context from this db
 
+## How to run this project
+1. Install uv ```brew install uv```
+3. Install dependencies ```uv sync```
+3. Run the app ```uv run main.py```
