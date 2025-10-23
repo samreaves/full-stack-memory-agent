@@ -17,10 +17,6 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
 
-class llmRequest(BaseModel):
-    session_id: str
-    messages: list[dict[str, str]]
-
 sessions = {}
 
 async def generate_stream(session_id: str, messages: list):
