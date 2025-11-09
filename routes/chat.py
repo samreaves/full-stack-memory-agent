@@ -49,10 +49,17 @@ async def generate_stream(session_id: str, messages: list):
         
         # After streaming completes, save the full assistant response
         if session_id in sessions:
-            sessions[session_id].append({
+            agent_response = {
                 "role": "assistant",
                 "content": complete_response
-            })
+            }
+
+            # Find embedding of the agent response and save it
+            embedding_response = await get_embedding(agent_response["content"])
+            agent_response_embedding = embedding_response.json().get("data", [{}])[0].get("embedding", [])
+            agent_response["embedding"] = agent_response_embedding
+
+            sessions[session_id].append(agent_response)
         
         # Signal completion to client
         yield f"data: {json.dumps({'done': True})}\n\n"
@@ -77,6 +84,11 @@ async def chat(request: ChatRequest):
         "role": "user",
         "content": request.message
     }
+
+    # Find embedding of the message and save it
+    embedding_response = await get_embedding(request.message)
+    message_embedding = embedding_response.json().get("data", [{}])[0].get("embedding", [])
+    current_message["embedding"] = message_embedding
     
     # Append user message to session
     sessions[session_id].append(current_message)
