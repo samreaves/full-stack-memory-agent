@@ -1,6 +1,6 @@
 from libs.llm_service import get_embedding
 
-def find_relevant_context(query: str, session_history: list, top_n: int = 3) -> list:
+async def find_relevant_context(query: str, session_history: list, top_n: int = 3) -> list:
     """
     Find the top_n most similar message pairs to the query.
     
@@ -13,7 +13,7 @@ def find_relevant_context(query: str, session_history: list, top_n: int = 3) -> 
         List of the most relevant message pairs
     """
     # Step 1: Get embedding for the query
-    query_embedding = get_embedding(query)
+    query_embedding = await get_embedding(query).json()
     
     # Step 2: Compute similarity for each message pair
     similarities = []
