@@ -1,21 +1,12 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 import json
-import requests
-import dotenv
-import os
+from models.requests import ChatRequest, EmbeddingRequest
+from libs.llm_service import get_embedding, generate_chat_stream
 
-dotenv.load_dotenv()
 
 router = APIRouter()
 
-MODEL_NAME = os.getenv("FRONTIER_MODEL")
-MODEL_URL = os.getenv("FRONTIER_MODEL_URL")
-
-class ChatRequest(BaseModel):
-    session_id: str
-    message: str
 
 sessions = {}
 
@@ -27,16 +18,7 @@ async def generate_stream(session_id: str, messages: list):
     
     # Make streaming request to LMStudio
     try:
-        response = requests.post(
-            MODEL_URL + "/v1/chat/completions",
-            json={
-                "model": MODEL_NAME,
-                "messages": messages,
-                "stream": True
-            },
-            stream=True,
-            timeout=60
-        )
+        response = await generate_chat_stream(messages)
         response.raise_for_status()
         
         # Process the streaming response
@@ -90,12 +72,14 @@ async def chat(request: ChatRequest):
     # Initialize session if it doesn't exist
     if session_id not in sessions:
         sessions[session_id] = []
-    
-    # Append user message to session
-    sessions[session_id].append({
+
+    current_message = {
         "role": "user",
         "content": request.message
-    })
+    }
+    
+    # Append user message to session
+    sessions[session_id].append(current_message)
     
     # Stream the response
     return StreamingResponse(

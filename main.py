@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from chat import router as chat_router
-from health import router as health_router
+from routes.chat import router as chat_router
+from routes.health import router as health_router
 import uvicorn
 
 app = FastAPI()
@@ -14,7 +14,7 @@ async def root():
     """
         Serve static HTML file for the chat interface.
     """
-    with open("index.html", "r") as f:
+    with open("statics/index.html", "r") as f:
         html_content = f.read()
     return HTMLResponse(content=html_content)
 
