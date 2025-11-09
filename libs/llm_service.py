@@ -36,4 +36,4 @@ async def get_embedding(message: str):
         },
         timeout=60
     )
-    return embedding_response.json()
+    return embedding_response
