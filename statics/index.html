@@ -198,19 +198,6 @@
             let fullResponse = '';
 
             try {
-                const embeddingResponse = await fetch('/chat/embedding', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        message: message
-                    })
-                });
-                const embeddingData = await embeddingResponse.json();
-                console.log(embeddingData);
-
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: {
