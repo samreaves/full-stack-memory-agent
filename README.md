@@ -12,4 +12,4 @@
 - FRONTIER_MODEL_URL={your-model-provider-domain-name} (https://api.openai.com)
 - FRONTIER_MODEL={your-selected-model} (gpt-4o-mini)
 - EMBEDDING_MODEL={your-embedding-model} (text-embedding-nomic-embed-text-v1.5)
-2. docker compose up -d
+2. Run the agent & Postgres DB ```docker compose up -d```
