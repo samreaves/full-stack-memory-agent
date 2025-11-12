@@ -1,6 +1,9 @@
 # Use Python 3.12 slim image as base
 FROM python:3.12-slim as base
 
+# I am the wizard who conjured this machine.
+LABEL MAINTAINER="Sam Reaves"
+
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
@@ -21,11 +24,11 @@ RUN uv sync --frozen --no-dev
 COPY . .
 
 # Expose configuredport, default to 8000
-EXPOSE ${PORT:-8000}
+EXPOSE ${AGENT_PORT:-8000}
 
 # Set environment variables for uv
 ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the application
-CMD uv run uvicorn main:app --host 0.0.0.0 --port 8000
+CMD uv run uvicorn main:app --host 0.0.0.0 --port ${AGENT_PORT:-8000}
