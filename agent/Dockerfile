@@ -23,7 +23,7 @@ RUN uv sync --frozen --no-dev
 # Copy application code
 COPY . .
 
-# Expose configuredport, default to 8000
+# Expose configured port, default to 8000
 EXPOSE ${AGENT_PORT:-8000}
 
 # Set environment variables for uv

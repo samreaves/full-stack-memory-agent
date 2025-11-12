@@ -13,3 +13,4 @@
 - FRONTIER_MODEL={your-selected-model} (gpt-4o-mini)
 - EMBEDDING_MODEL={your-embedding-model} (text-embedding-nomic-embed-text-v1.5)
 2. Run the agent & Postgres DB ```docker compose up -d```
+3. Visit http://localhost:${AGENT_PORT} to speak with your agent.
