@@ -1,4 +1,4 @@
-from models.message import Message
+from schemas.message import Message
 import numpy as np
 
 def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:

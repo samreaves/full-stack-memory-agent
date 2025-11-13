@@ -1,12 +1,11 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 import json
-from models.request import ChatRequest
+from schemas.request import ChatRequest
 from libs.llm_service import get_embedding, generate_chat_stream
 
 
 router = APIRouter()
-
 
 sessions = {}
 
