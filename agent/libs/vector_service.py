@@ -1,52 +1,50 @@
 from schemas.message import Message
-import numpy as np
-
-def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
-    """Compute cosine similarity between two vectors."""
-    # Convert to numpy arrays
-    a = np.array(vec1)
-    b = np.array(vec2)
-
-    # Calculate cosine similarity
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
 
 
-async def find_relevant_context(message: Message, session_history: list[Message], top_n: int = 3) -> list[Message]:
+async def find_relevant_context_from_db(
+    db: Session,
+    query_embedding: list[float],
+    top_n: int = 3) -> list[Message]:
     """
     Find the top_n most similar messages and their conversational pairs.
     """
-    similarities = []
+    # Get similar messages with their conversation context using a CTE
+    query = text("""
+        WITH similar_msgs AS (
+            SELECT
+                id,
+                conversation_id,
+                role,
+                content,
+                created_at,
+                embedding <=> :query_embedding AS distance,
+                LAG(id) OVER (PARTITION BY conversation_id ORDER BY created_at) AS prev_id,
+                LEAD(id) OVER (PARTITION BY conversation_id ORDER BY created_at) AS next_id
+            FROM messages
+            ORDER BY distance
+            LIMIT :top_n
+        ),
+        pairs AS (
+            SELECT DISTINCT m.id
+            FROM similar_msgs sm
+            JOIN messages m ON (
+                m.id = sm.id OR
+                (sm.role = 'user' AND m.id = sm.next_id) OR
+                (sm.role = 'assistant' AND m.id = sm.prev_id)
+            )
+        )
+        SELECT m.* FROM messages m
+        JOIN pairs p ON m.id = p.id
+        ORDER BY m.created_at;
+    """)
 
-    for i, stored_message in enumerate(session_history):
-        similarity_score = cosine_similarity(message.embedding, stored_message.embedding)
-        similarities.append((similarity_score, i, stored_message))
+    result = db.execute(query, {
+        "query_embedding": str(query_embedding),
+        "top_n": top_n
+    })
 
-    # Sort and get top N
-    similarities.sort(key=lambda x: x[0], reverse=True)
-
-    # Now grab pairs
-    relevant_messages = []
-    used_indices = set()
-
-    for score, index, msg in similarities[:top_n]:
-        if index in used_indices:
-            continue
-
-        # If it's a user message, grab it + next assistant message
-        if msg.role == "user" and index + 1 < len(session_history):
-            relevant_messages.append(session_history[index])
-            relevant_messages.append(session_history[index + 1])
-            used_indices.add(index)
-            used_indices.add(index + 1)
-
-        # If it's an assistant message, grab previous user + this assistant
-        elif msg.role == "assistant" and index > 0:
-            relevant_messages.append(session_history[index - 1])
-            relevant_messages.append(session_history[index])
-            used_indices.add(index - 1)
-            used_indices.add(index)
-
-    # Sort chronologically before returning
-    relevant_messages.sort(key=lambda m: session_history.index(m))
-
-    return relevant_messages
+    # Convert to Message objects
+    messages = [Message(**dict(row)) for row in result]
+    return messages

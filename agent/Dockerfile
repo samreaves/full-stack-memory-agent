@@ -4,6 +4,17 @@ FROM python:3.12-slim as base
 # I am the wizard who conjured this machine.
 LABEL MAINTAINER="Sam Reaves"
 
+# Set environment variables for uv
+ENV UV_PROJECT_ENVIRONMENT=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+ENV AGENT_HOST=${AGENT_HOST:-0.0.0.0}
+ENV AGENT_PORT=${AGENT_PORT:-8000}
+ENV POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+ENV POSTGRES_PORT=${POSTGRES_PORT:-5432}
+ENV POSTGRES_DB=${POSTGRES_DB:-agent}
+ENV POSTGRES_USER=${POSTGRES_USER:-agent_user}
+ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-supersecretpassword}
+
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
@@ -26,9 +37,5 @@ COPY . .
 # Expose configured port, default to 8000
 EXPOSE ${AGENT_PORT:-8000}
 
-# Set environment variables for uv
-ENV UV_PROJECT_ENVIRONMENT=/app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
-
 # Run the application
-CMD uv run uvicorn main:app --host 0.0.0.0 --port ${AGENT_PORT:-8000}
+CMD uv run uvicorn main:app --host ${AGENT_HOST:-0.0.0.0} --port ${AGENT_PORT:-8000}

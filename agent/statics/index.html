@@ -136,25 +136,10 @@
     </div>
 
     <script>
-        // Session management
-        let sessionId = localStorage.getItem('sessionId');
-        if (!sessionId) {
-            sessionId = generateUUID();
-            localStorage.setItem('sessionId', sessionId);
-        }
 
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
-
-        // Generate a simple UUID
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
 
         // Add message to UI
         function addMessage(role, content) {
@@ -166,17 +151,55 @@
             return messageDiv;
         }
 
-        // Load chat history on page load
-        async function loadHistory() {
+        // Load chat messages by conversation
+        async function loadMessagesByConversation(conversationId) {
             try {
-                const response = await fetch(`/chat/history?session_id=${sessionId}`);
+                const response = await fetch(`/conversations/${conversationId}`);
                 const data = await response.json();
-                
-                data.messages.forEach(msg => {
-                    addMessage(msg.role, msg.content);
-                });
+
+                const conversations = JSON.parse(sessionStorage.getItem('conversations')) || {};
+                if (conversations[conversationId]) {
+                    conversations[conversationId].messages = data.messages;
+                }
+                sessionStorage.setItem('conversations', JSON.stringify(conversations));
             } catch (error) {
                 console.error('Error loading history:', error);
+            }
+        }
+
+        /* Get all conversations */
+        async function loadConversationHistory() {
+            try {
+                const response = await fetch(`/conversations`);
+                const data = await response.json();
+                
+                const conversations = {};
+                data.forEach(conversation => {
+                    conversations[conversation.id] = conversation;
+                });
+                sessionStorage.setItem('conversations', JSON.stringify(conversations));
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        async function createConversation(message) {
+            try {
+                const response = await fetch(`/conversations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message.trim() })
+                });
+                const data = await response.json();
+
+                const conversations = sessionStorage.getItem('conversations') ? JSON.parse(sessionStorage.getItem('conversations')) : {};
+                conversations[data.id] = data;
+                sessionStorage.setItem('conversations', JSON.stringify(conversations));
+                return data.id;
+            } catch (error) {
+                console.error('Error creating conversation:', error);
             }
         }
 
@@ -193,6 +216,13 @@
             addMessage('user', message);
             messageInput.value = '';
 
+            let conversationId = sessionStorage.getItem('conversationId');
+
+            if (!conversationId) {
+                const conversationId = await createConversation(message);
+                sessionStorage.setItem('conversationId', conversationId);
+            }
+
             // Create placeholder for assistant response
             const assistantMessage = addMessage('assistant', '');
             let fullResponse = '';
@@ -204,7 +234,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        session_id: sessionId,
+                        conversation_id: sessionStorage.getItem('conversationId'),
                         message: message
                     })
                 });
@@ -241,6 +271,8 @@
                         }
                     }
                 }
+                const currentConversationId = sessionStorage.getItem('conversationId');
+                await loadMessagesByConversation(currentConversationId);
             } catch (error) {
                 assistantMessage.textContent = `Error: ${error.message}`;
                 assistantMessage.style.color = 'red';
@@ -252,6 +284,10 @@
             }
         }
 
+        // @TODO: Prefill the selected conversation in the UI
+        // @TODO: Add a list of conversations in the UI
+        // @TODO: Clear the conversation messages when a new conversation is created
+
         // Event listeners
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => {
@@ -261,7 +297,7 @@
         });
 
         // Load history when page loads
-        loadHistory();
+        loadConversationHistory();
     </script>
 </body>
 </html>

@@ -20,9 +20,24 @@ async def generate_chat_stream(messages: list):
             "stream": True
         },
         stream=True,
-        timeout=60
+        timeout=5
     )
     return response
+
+async def generate_chat(messages: list):
+    """
+    Generate a chat from a list of messages.
+    """
+    response = requests.post(
+        MODEL_URL + "/v1/chat/completions",
+        json={
+            "model": MODEL_NAME,
+            "messages": messages,
+        },
+        timeout=5
+    )
+    return response
+
 
 async def get_embedding(message: str):
     """
@@ -34,6 +49,6 @@ async def get_embedding(message: str):
             "model": EMBEDDING_MODEL_NAME,
             "input": message,
         },
-        timeout=60
+        timeout=5
     )
     return embedding_response
