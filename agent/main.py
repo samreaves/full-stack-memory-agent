@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from routes.chat import router as chat_router
 from routes.health import router as health_router
@@ -29,6 +30,15 @@ async def startup_event():
 app.include_router(chat_router, prefix="/chat")
 app.include_router(conversations_router, prefix="/conversations")
 app.include_router(health_router, prefix="/health")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Add your client origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():
