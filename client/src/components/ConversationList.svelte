@@ -14,10 +14,20 @@
 			console.error('Error loading conversation:', error);
 		}
 	}
+
+	function startNewConversation() {
+		if ($currentConversationId === null) return;
+		currentConversationId.set(null);
+	}
 </script>
 
 <div class="conversation-list">
-	<h3 class="list-header">Conversations</h3>
+	<h3 class="list-header">
+		<span>Conversations</span>
+		<button class="new-conversation" on:click={startNewConversation} aria-label="Start new conversation">
+			+
+		</button>
+	</h3>
 	<div class="conversations">
 		{#each $conversationsList as conversation}
 			<button
@@ -51,6 +61,30 @@
 		color: #333;
 		border-bottom: 1px solid #e0e0e0;
 		background: white;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.new-conversation {
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		border: none;
+		background: #4a90e2;
+		color: white;
+		font-size: 20px;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 600;
+		transition: background 0.2s;
+	}
+
+	.new-conversation:hover {
+		background: #357abd;
 	}
 
 	.conversations {
