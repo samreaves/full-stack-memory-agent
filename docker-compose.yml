@@ -18,6 +18,19 @@ services:
     command: uv run uvicorn main:app --host 0.0.0.0 --port ${AGENT_PORT:-8000}
     depends_on:
       - postgres
+  client:
+    build:
+      context: ./client
+      args:
+        - API_PROTOCOL=${API_PROTOCOL:-http}
+        - API_HOST=${AGENT_HOST:-0.0.0.0}
+        - API_PORT=${AGENT_PORT:-8000}
+        - CLIENT_PORT=${CLIENT_PORT:-5173}
+    container_name: ai_client
+    ports:
+      - ${CLIENT_PORT:-5173}:${CLIENT_PORT:-5173}
+    depends_on:
+      - agent
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ${POSTGRES_HOST:-postgres}
