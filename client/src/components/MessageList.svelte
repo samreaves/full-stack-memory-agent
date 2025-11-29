@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Message } from '$lib/api';
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	export let messages: Message[] = [];
 
@@ -21,10 +22,16 @@
 </script>
 
 <div class="messages-container" bind:this={messagesContainer}>
-	{#each messages as message}
-		<div class="message {message.role}">
-			{message.content}
-		</div>
+	{#each messages as message, index (message.role + '-' + index)}
+		{#if message.role === 'user'}
+			<div class="message user">
+				{message.content}
+			</div>
+		{:else}
+			<div class="message assistant" in:fade={{ duration: 300 }}>
+				<span class="assistant-text">{message.content}</span>
+			</div>
+		{/if}
 	{/each}
 </div>
 
@@ -39,23 +46,30 @@
 	}
 
 	.message {
-		max-width: 70%;
-		padding: 12px 16px;
-		border-radius: 12px;
-		line-height: 1.4;
+		line-height: 1.6;
 		word-wrap: break-word;
 	}
 
 	.message.user {
 		align-self: flex-end;
+		max-width: 70%;
+		padding: 12px 16px;
+		border-radius: 12px;
 		background: #4a90e2;
 		color: white;
 	}
 
 	.message.assistant {
 		align-self: flex-start;
-		background: #e9ecef;
+		max-width: 100%;
+		padding: 0;
 		color: #333;
+	}
+
+	.assistant-text {
+		display: inline;
+		opacity: 1;
+		transition: opacity 0.15s ease-in-out;
 	}
 </style>
 
