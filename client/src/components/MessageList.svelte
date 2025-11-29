@@ -2,10 +2,23 @@
 	import type { Message } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
+	import LoadingIndicator from './LoadingIndicator.svelte';
 
 	export let messages: Message[] = [];
+	export let isAwaitingFirstToken: boolean = false;
 
 	let messagesContainer: HTMLDivElement;
+	let lastAssistantIndex = -1;
+
+	// Track the index of the last assistant message so we know which one is streaming
+	$: {
+		lastAssistantIndex = -1;
+		messages.forEach((message, index) => {
+			if (message.role === 'assistant') {
+				lastAssistantIndex = index;
+			}
+		});
+	}
 
 	// Auto-scroll to bottom when messages change
 	$: if (messagesContainer && messages.length > 0) {
@@ -29,7 +42,11 @@
 			</div>
 		{:else}
 			<div class="message assistant" in:fade={{ duration: 300 }}>
-				<span class="assistant-text">{message.content}</span>
+				{#if isAwaitingFirstToken && index === lastAssistantIndex && !message.content}
+					<LoadingIndicator />
+				{:else}
+					<span class="assistant-text">{message.content}</span>
+				{/if}
 			</div>
 		{/if}
 	{/each}

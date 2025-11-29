@@ -2,20 +2,21 @@
 	import MessageList from './MessageList.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import ConversationList from './ConversationList.svelte';
-	import {
-		currentConversationId,
-		currentConversation,
-		setConversations,
-		upsertConversation,
-		addMessageToCurrentConversation,
-		updateLastMessage
-	} from '$lib/stores/conversations';
+import {
+	currentConversationId,
+	currentConversation,
+	setConversations,
+	upsertConversation,
+	addMessageToCurrentConversation,
+	updateLastMessage
+} from '$lib/stores/conversations';
 	import { createConversation, getConversations, getConversationById, sendMessage } from '$lib/api';
-	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
+import { onMount } from 'svelte';
+import { get } from 'svelte/store';
 
-	let isLoading = false;
-	let showSidebar = true;
+let isLoading = false;
+let isAwaitingFirstToken = false;
+let showSidebar = true;
 
 	onMount(async () => {
 		// Load all conversations on mount
@@ -34,6 +35,7 @@
 		if (!messageText.trim() || isLoading) return;
 
 		isLoading = true;
+		isAwaitingFirstToken = false;
 
 		try {
 			let conversationId = get(currentConversationId);
@@ -58,11 +60,19 @@
 				content: ''
 			});
 
+			// Show inline loader in the assistant bubble until the first token arrives
+			isAwaitingFirstToken = true;
+
 			// Stream the response
 			let fullResponse = '';
 			try {
 				for await (const chunk of sendMessage(conversationId, messageText)) {
 					if (chunk.token) {
+						// First token has arrived; hide the inline loader
+						if (isAwaitingFirstToken) {
+							isAwaitingFirstToken = false;
+						}
+
 						fullResponse += chunk.token;
 						updateLastMessage(fullResponse);
 					}
@@ -88,6 +98,8 @@
 			console.error('Error in handleSendMessage:', error);
 		} finally {
 			isLoading = false;
+			// Ensure loader is cleared even if no tokens arrive
+			isAwaitingFirstToken = false;
 		}
 	}
 
@@ -105,7 +117,7 @@
 			<button class="sidebar-toggle" on:click={toggleSidebar}>☰</button>
 			<span>AI Chat with Memory - Phase 3</span>
 		</div>
-		<MessageList messages={messages} />
+		<MessageList messages={messages} isAwaitingFirstToken={isAwaitingFirstToken} />
 		<MessageInput onSend={handleSendMessage} disabled={isLoading} />
 	</div>
 </div>
