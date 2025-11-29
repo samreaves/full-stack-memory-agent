@@ -1,6 +1,7 @@
 from schemas.message import Message
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
+import json
 
 
 async def find_relevant_context_from_db(
@@ -19,7 +20,7 @@ async def find_relevant_context_from_db(
                 role,
                 content,
                 created_at,
-                embedding <=> :query_embedding AS distance,
+                embedding <=> CAST(:query_embedding AS vector) AS distance,
                 LAG(id) OVER (PARTITION BY conversation_id ORDER BY created_at) AS prev_id,
                 LEAD(id) OVER (PARTITION BY conversation_id ORDER BY created_at) AS next_id
             FROM messages
@@ -40,11 +41,21 @@ async def find_relevant_context_from_db(
         ORDER BY m.created_at;
     """)
 
-    result = db.execute(query, {
-        "query_embedding": str(query_embedding),
-        "top_n": top_n
-    })
+    result = db.execute(
+        query,
+        {
+            # Pass embedding as a string representation and cast to vector in SQL
+            "query_embedding": str(query_embedding),
+            "top_n": top_n,
+        },
+    )
 
-    # Convert to Message objects
-    messages = [Message(**dict(row)) for row in result]
+    # Convert to Message objects; use RowMapping to avoid dict(...) issues
+    messages = []
+    for row in result:
+        row_dict = dict(row._mapping)
+        # Parse embedding from string to list if needed
+        if isinstance(row_dict.get('embedding'), str):
+            row_dict['embedding'] = json.loads(row_dict['embedding'])
+        messages.append(Message(**row_dict))
     return messages

@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from libs.llm_service import get_embedding, generate_chat_stream
+from libs.vector_service import find_relevant_context_from_db
 from libs.database import get_db
 from repositories.message import create_message, get_messages
 from schemas.request import ChatRequest
@@ -18,38 +19,37 @@ async def generate_stream(conversation_id: str, messages: list, db: Session = De
     Generator function that streams tokens from LLM source and accumulates the complete response.
     """
     complete_response = ""
-    
+
     # Make streaming request to model provider
     try:
         response = await generate_chat_stream(messages)
         response.raise_for_status()
-        
+
         # Process the streaming response
         for line in response.iter_lines():
             if line:
                 line = line.decode('utf-8')
-                
+
                 # SSE format: lines start with "data: "
                 if line.startswith('data: '):
                     content = line[6:]  # Remove 'data: ' prefix
-                    
+
                     # Check for stream end
                     if content.strip() == '[DONE]':
                         break
-                    
+
                     try:
                         data = json.loads(content)
                         # Extract the token from the response
                         token = data.get('choices', [{}])[0].get('delta', {}).get('content', '')
-                        
                         if token:
                             complete_response += token
                             # Yield in SSE format for the client
                             yield f"data: {json.dumps({'token': token})}\n\n"
-                    
+
                     except json.JSONDecodeError:
                         continue
-        
+
         # After streaming completes, save the full assistant response
         try:
             agent_response = {
@@ -103,7 +103,39 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         db.refresh(message)
         messages = get_messages(db, request.conversation_id)
 
-        messages_for_stream = [{"role": llm_message.role, "content": llm_message.content} for llm_message in messages]
+        relevant_context = await find_relevant_context_from_db(
+            db=db,
+            query_embedding=message_embedding,
+            top_n=5
+        )
+
+        # Filter to only cross-conversation context as messages from current conversation already included
+        cross_conversation_context = [
+            llm_message for llm_message in relevant_context
+            if str(llm_message.conversation_id) != str(request.conversation_id)
+        ]
+
+        if len(messages) > 6 and cross_conversation_context:
+            older_messages = messages[:-6]
+            recent_messages = messages[-6:]
+
+            # Flatten into a single list of {role, content} dicts in the order:
+            # older conversation messages -> cross‑conversation context -> recent messages
+            messages_for_stream = [
+                *[{"role": llm_message.role, "content": llm_message.content} for llm_message in older_messages],
+                *[{"role": llm_message.role, "content": llm_message.content} for llm_message in cross_conversation_context],
+                *[{"role": llm_message.role, "content": llm_message.content} for llm_message in recent_messages],
+            ]
+        elif len(messages) <= 5 and cross_conversation_context:
+            # Cross‑conversation context first, then current conversation messages
+            messages_for_stream = [
+                *[{"role": llm_message.role, "content": llm_message.content} for llm_message in cross_conversation_context],
+                *[{"role": llm_message.role, "content": llm_message.content} for llm_message in messages],]
+        else:
+            # Only current conversation messages
+            messages_for_stream = [
+                {"role": llm_message.role, "content": llm_message.content} for llm_message in messages
+            ]
 
         # Stream the response
         return StreamingResponse(
