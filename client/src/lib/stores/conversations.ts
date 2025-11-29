@@ -83,7 +83,7 @@ export function addMessageToCurrentConversation(message: Message) {
 export function updateLastMessage(content: string) {
 	conversations.update((conversationMap) => {
 		const currentIdValue = get(currentConversationId);
-		
+
 		if (currentIdValue && conversationMap[currentIdValue]?.messages) {
 			const messages = conversationMap[currentIdValue].messages!;
 			if (messages.length > 0) {
@@ -93,6 +93,28 @@ export function updateLastMessage(content: string) {
 				}
 			}
 		}
+		return conversationMap;
+	});
+}
+
+/**
+ * Remove the last assistant message in the current conversation.
+ * Useful for cleaning up placeholder/loading bubbles on error.
+ */
+export function removeLastAssistantMessageFromCurrentConversation() {
+	conversations.update((conversationMap) => {
+		const currentIdValue = get(currentConversationId);
+
+		if (currentIdValue && conversationMap[currentIdValue]?.messages) {
+			const messages = conversationMap[currentIdValue].messages!;
+			for (let i = messages.length - 1; i >= 0; i -= 1) {
+				if (messages[i].role === 'assistant') {
+					messages.splice(i, 1);
+					break;
+				}
+			}
+		}
+
 		return conversationMap;
 	});
 }

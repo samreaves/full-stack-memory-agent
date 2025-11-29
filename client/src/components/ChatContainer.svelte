@@ -2,17 +2,19 @@
 	import MessageList from './MessageList.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import ConversationList from './ConversationList.svelte';
-import {
-	currentConversationId,
-	currentConversation,
-	setConversations,
-	upsertConversation,
-	addMessageToCurrentConversation,
-	updateLastMessage
-} from '$lib/stores/conversations';
+	import {
+		conversations,
+		currentConversationId,
+		currentConversation,
+		setConversations,
+		upsertConversation,
+		addMessageToCurrentConversation,
+		updateLastMessage,
+		removeLastAssistantMessageFromCurrentConversation
+	} from '$lib/stores/conversations';
 	import { createConversation, getConversations, getConversationById, sendMessage } from '$lib/api';
-import { onMount } from 'svelte';
-import { get } from 'svelte/store';
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 let isLoading = false;
 let isAwaitingFirstToken = false;
@@ -32,26 +34,40 @@ let showSidebar = true;
 	$: messages = $currentConversation?.messages || [];
 
 	async function handleSendMessage(messageText: string) {
-		if (!messageText.trim() || isLoading) return;
+		const trimmedMessage = messageText.trim();
+		if (!trimmedMessage || isLoading) return;
 
 		isLoading = true;
-		isAwaitingFirstToken = false;
+
+		let conversationId = get(currentConversationId);
+		const hasRealConversation =
+			!!conversationId && !conversationId.toString().startsWith('temp-');
+		let tempConversationId: string | null = null;
 
 		try {
-			let conversationId = get(currentConversationId);
-
-			// Create conversation if none exists
+			// If there is no conversation at all yet, create a temporary one
 			if (!conversationId) {
-				const newConversation = await createConversation(messageText);
-				upsertConversation(newConversation);
-				conversationId = newConversation.id;
-				currentConversationId.set(conversationId);
+				tempConversationId = `temp-${Date.now()}`;
+
+				const title =
+					trimmedMessage.length > 40
+						? `${trimmedMessage.slice(0, 40)}...`
+						: trimmedMessage || 'New conversation';
+
+				upsertConversation({
+					id: tempConversationId,
+					title,
+					messages: []
+				});
+
+				currentConversationId.set(tempConversationId);
+				conversationId = tempConversationId;
 			}
 
 			// Add user message to UI immediately
 			addMessageToCurrentConversation({
 				role: 'user',
-				content: messageText
+				content: trimmedMessage
 			});
 
 			// Add placeholder for assistant response
@@ -63,10 +79,37 @@ let showSidebar = true;
 			// Show inline loader in the assistant bubble until the first token arrives
 			isAwaitingFirstToken = true;
 
+			// Ensure there is a real backend conversation ID before streaming
+			if (!hasRealConversation) {
+				const newConversation = await createConversation(trimmedMessage);
+
+				// If we started with a temporary conversation, migrate its messages
+				if (tempConversationId) {
+					conversations.update((conversationMap) => {
+						const tempConversation = conversationMap[tempConversationId!];
+						const messages = tempConversation?.messages ?? [];
+
+						conversationMap[newConversation.id] = {
+							...newConversation,
+							messages
+						};
+
+						delete conversationMap[tempConversationId!];
+
+						return conversationMap;
+					});
+				} else {
+					upsertConversation(newConversation);
+				}
+
+				currentConversationId.set(newConversation.id);
+				conversationId = newConversation.id;
+			}
+
 			// Stream the response
 			let fullResponse = '';
 			try {
-				for await (const chunk of sendMessage(conversationId, messageText)) {
+				for await (const chunk of sendMessage(conversationId as string, trimmedMessage)) {
 					if (chunk.token) {
 						// First token has arrived; hide the inline loader
 						if (isAwaitingFirstToken) {
@@ -88,14 +131,21 @@ let showSidebar = true;
 				}
 
 				// Reload conversation to get updated messages from server
-				const updatedConversation = await getConversationById(conversationId);
-				upsertConversation(updatedConversation);
+				if (conversationId) {
+					const updatedConversation = await getConversationById(conversationId as string);
+					upsertConversation(updatedConversation);
+				}
 			} catch (error) {
 				console.error('Error sending message:', error);
-				updateLastMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+				updateLastMessage(
+					`Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+				);
 			}
 		} catch (error) {
 			console.error('Error in handleSendMessage:', error);
+
+			// Clean up the assistant placeholder/loader on error
+			removeLastAssistantMessageFromCurrentConversation();
 		} finally {
 			isLoading = false;
 			// Ensure loader is cleared even if no tokens arrive
