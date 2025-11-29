@@ -1,0 +1,48 @@
+services:
+  agent:
+    build:
+      context: ./agent
+    working_dir: /app
+    container_name: ai_agent
+    environment:
+      - FRONTIER_MODEL_URL=${FRONTIER_MODEL_URL}
+      - FRONTIER_MODEL=${FRONTIER_MODEL}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-agent}
+      - POSTGRES_USER=${POSTGRES_USER:-agent_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-supersecretpassword}
+    ports:
+      - ${AGENT_PORT:-8000}:${AGENT_PORT:-8000}
+    command: uv run uvicorn main:app --host 0.0.0.0 --port ${AGENT_PORT:-8000}
+    depends_on:
+      - postgres
+  client:
+    build:
+      context: ./client
+      args:
+        - API_PROTOCOL=${API_PROTOCOL:-http}
+        - API_HOST=${AGENT_HOST:-0.0.0.0}
+        - API_PORT=${AGENT_PORT:-8000}
+        - CLIENT_PORT=${CLIENT_PORT:-5173}
+    container_name: ai_client
+    ports:
+      - ${CLIENT_PORT:-5173}:${CLIENT_PORT:-5173}
+    depends_on:
+      - agent
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ${POSTGRES_HOST:-postgres}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agent_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supersecretpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-agent}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data:
