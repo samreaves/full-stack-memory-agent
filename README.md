@@ -9,9 +9,12 @@
 
 ## How to run this project
 1. Copy the .env.example file to an .env file with your own environment variables:
-- FRONTIER_MODEL_URL={your-model-provider-domain-name} (https://api.openai.com)
-- FRONTIER_MODEL={your-selected-model} (gpt-4o-mini)
-- EMBEDDING_MODEL={your-embedding-model} (text-embedding-nomic-embed-text-v1.5)
-- MODEL_PROVIDER_API_KEY={your-api-key}
-2. Run the agent & Postgres DB ```docker compose up -d```
+- FRONTIER_MODEL_URL=https://api.openai.com
+- FRONTIER_MODEL_NAME=gpt-5-nano
+- FRONTIER_MODEL_PROVIDER_API_KEY=your-openai-api-key
+- EMBEDDING_MODEL_URL==https://api.openai.com
+- EMBEDDING_MODEL_NAME=text-embedding-3-small
+- EMBEDDING_MODEL_DIMENSIONS=1024
+- EMBEDDING_MODEL_PROVIDER_API_KEY=your-openai-api-key
+2. Run the agent, client & Postgres DB ```docker compose up --build -d```
 3. Visit http://${CLIENT_HOST}:${CLIENT_PORT} to speak with your agent.

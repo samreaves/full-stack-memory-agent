@@ -65,16 +65,16 @@ async def generate_stream(conversation_id: str, messages: list, db: Session = De
                 embedding_response = await get_embedding(agent_response["content"])
                 embedding_response.raise_for_status()  # Raise an exception for bad status codes
                 embedding_data = embedding_response.json()
-                
+
                 # Extract embedding with proper validation
                 data_list = embedding_data.get("data", [])
                 if not data_list:
                     raise ValueError("No embedding data in response")
-                
+
                 agent_response_embedding = data_list[0].get("embedding", [])
                 if not agent_response_embedding:
                     raise ValueError("Embedding is empty in response")
-                
+
                 agent_response["embedding"] = agent_response_embedding
             except Exception as e:
                 logger.error(f"Error getting embedding: {str(e)}")
