@@ -6,13 +6,19 @@ services:
     container_name: ai_agent
     environment:
       - FRONTIER_MODEL_URL=${FRONTIER_MODEL_URL}
-      - FRONTIER_MODEL=${FRONTIER_MODEL}
+      - FRONTIER_MODEL_NAME=${FRONTIER_MODEL_NAME}
+      - FRONTIER_MODEL_PROVIDER_API_KEY=${FRONTIER_MODEL_PROVIDER_API_KEY}
       - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
+      - EMBEDDING_MODEL_URL=${EMBEDDING_MODEL_URL}
+      - EMBEDDING_MODEL_DIMENSIONS=${EMBEDDING_MODEL_DIMENSIONS}
+      - EMBEDDING_MODEL_PROVIDER_API_KEY=${EMBEDDING_MODEL_PROVIDER_API_KEY}
       - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DB=${POSTGRES_DB:-agent}
       - POSTGRES_USER=${POSTGRES_USER:-agent_user}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-supersecretpassword}
+      - CLIENT_HOST=${CLIENT_HOST:-localhost}
+      - CLIENT_PORT=${CLIENT_PORT:-5173}
     ports:
       - ${AGENT_PORT:-8000}:${AGENT_PORT:-8000}
     command: uv run uvicorn main:app --host 0.0.0.0 --port ${AGENT_PORT:-8000}
@@ -25,6 +31,7 @@ services:
         - API_PROTOCOL=${API_PROTOCOL:-http}
         - API_HOST=${AGENT_HOST:-0.0.0.0}
         - API_PORT=${AGENT_PORT:-8000}
+        - CLIENT_HOST=${CLIENT_HOST:-localhost}
         - CLIENT_PORT=${CLIENT_PORT:-5173}
     container_name: ai_client
     ports:
@@ -42,7 +49,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   postgres_data:

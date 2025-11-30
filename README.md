@@ -12,5 +12,6 @@
 - FRONTIER_MODEL_URL={your-model-provider-domain-name} (https://api.openai.com)
 - FRONTIER_MODEL={your-selected-model} (gpt-4o-mini)
 - EMBEDDING_MODEL={your-embedding-model} (text-embedding-nomic-embed-text-v1.5)
+- MODEL_PROVIDER_API_KEY={your-api-key}
 2. Run the agent & Postgres DB ```docker compose up -d```
-3. Visit http://localhost:${AGENT_PORT} to speak with your agent.
+3. Visit http://${CLIENT_HOST}:${CLIENT_PORT} to speak with your agent.

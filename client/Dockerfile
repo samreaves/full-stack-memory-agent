@@ -16,13 +16,13 @@ COPY . .
 ARG API_PROTOCOL=${API_PROTOCOL:-http}
 ARG API_HOST=${API_HOST:-0.0.0.0}
 ARG API_PORT=${API_PORT:-8000}
-ARG CLIENT_PORT=${CLIENT_PORT:-5173}
+ARG CLIENT_HOST=${CLIENT_HOST:-localhost}
 
 # Set environment variables
-ENV API_PROTOCOL=${API_PROTOCOL}
-ENV API_HOST=${API_HOST}
-ENV API_PORT=${API_PORT}
-ENV CLIENT_PORT=${CLIENT_PORT}
+ENV API_PROTOCOL=${API_PROTOCOL:-http}
+ENV API_HOST=${API_HOST:-0.0.0.0}
+ENV API_PORT=${API_PORT:-8000}
+ENV CLIENT_HOST=${CLIENT_HOST:-localhost}
 
 # Build the application
 RUN npm run build
@@ -35,12 +35,17 @@ WORKDIR /app
 # Install serve for static file serving
 RUN npm install -g serve
 
+# Build arguments for environment variables
+ARG CLIENT_PORT=${CLIENT_PORT:-5173}
+
+# Set environment variables
+ENV CLIENT_PORT=${CLIENT_PORT:-5173}
+
 # Copy built files from builder
 COPY --from=builder /app/build ./build
 
 # Expose port
-EXPOSE 5173
+EXPOSE ${CLIENT_PORT}
 
 # Serve the built application
-CMD ["sh", "-c", "serve -s build -l 5173"]
-
+CMD ["sh", "-c", "serve -s build -l ${CLIENT_PORT}"]
