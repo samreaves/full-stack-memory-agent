@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+import logging
 
 from libs.llm_service import get_embedding, generate_chat_stream
 from libs.vector_service import find_relevant_context_from_db
@@ -8,6 +9,8 @@ from libs.database import get_db
 from repositories.message import create_message, get_messages
 from schemas.request import ChatRequest
 import json
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter()
@@ -58,9 +61,26 @@ async def generate_stream(conversation_id: str, messages: list, db: Session = De
             }
 
             # Find embedding of the agent response and save it
-            embedding_response = await get_embedding(agent_response["content"])
-            agent_response_embedding = embedding_response.json().get("data", [{}])[0].get("embedding", [])
-            agent_response["embedding"] = agent_response_embedding
+            try:
+                embedding_response = await get_embedding(agent_response["content"])
+                embedding_response.raise_for_status()  # Raise an exception for bad status codes
+                embedding_data = embedding_response.json()
+
+                # Extract embedding with proper validation
+                data_list = embedding_data.get("data", [])
+                if not data_list:
+                    raise ValueError("No embedding data in response")
+
+                agent_response_embedding = data_list[0].get("embedding", [])
+                if not agent_response_embedding:
+                    raise ValueError("Embedding is empty in response")
+
+                agent_response["embedding"] = agent_response_embedding
+            except Exception as e:
+                logger.error(f"Error getting embedding: {str(e)}")
+                # Yield error and skip saving message
+                yield f"data: {json.dumps({'error': f'Error getting embedding: {str(e)}'})}\n\n"
+                return
 
             latest_message = create_message(db, conversation_id, agent_response["role"], agent_response["content"], agent_response_embedding)
             db.commit()
@@ -71,7 +91,7 @@ async def generate_stream(conversation_id: str, messages: list, db: Session = De
 
         # Signal completion to client
         yield f"data: {json.dumps({'done': True})}\n\n"
-    
+
     except Exception as e:
         error_msg = f"Error streaming from LMStudio: {str(e)}"
         yield f"data: {json.dumps({'error': error_msg})}\n\n"
@@ -94,9 +114,24 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         }
 
         # Find embedding of the message and save it
-        embedding_response = await get_embedding(request.message)
-        message_embedding = embedding_response.json().get("data", [{}])[0].get("embedding", [])
-        current_message["embedding"] = message_embedding
+        try:
+            embedding_response = await get_embedding(request.message)
+            embedding_response.raise_for_status()  # Raise an exception for bad status codes
+            embedding_data = embedding_response.json()
+
+            # Extract embedding with proper validation
+            data_list = embedding_data.get("data", [])
+            if not data_list:
+                raise ValueError("No embedding data in response")
+
+            message_embedding = data_list[0].get("embedding", [])
+            if not message_embedding:
+                raise ValueError("Embedding is empty in response")
+
+            current_message["embedding"] = message_embedding
+        except Exception as e:
+            logger.error(f"Error getting embedding for user message: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error getting embedding: {str(e)}")
 
         message = create_message(db, request.conversation_id, current_message["role"], current_message["content"], current_message["embedding"])
         db.commit()

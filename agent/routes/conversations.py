@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from libs.llm_service import generate_chat
 from libs.database import get_db
@@ -8,6 +8,7 @@ from repositories.message import get_messages
 from schemas.conversation import Conversation, ChatConversation
 from schemas.message import ChatMessage, Message
 from schemas.request import ChatRequest
+import requests
 
 router = APIRouter()
 
@@ -16,17 +17,40 @@ async def create_conversation_endpoint(chat_request: ChatRequest, db: Session = 
     """
     Create a new conversation with title based on the first message
     """
-    response = await generate_chat([{
-        "role": "user",
-        "content": f"Generate a title for a new conversation between a user and an assistant based on the following message: {chat_request.message}"
-    }])
+    try:
+        response = await generate_chat([{
+            "role": "user",
+            "content": f"Generate a title for a new conversation between a user and an assistant based on the following message: {chat_request.message}"
+        }])
 
-    title = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-    conversation = create_conversation(db, title)
-    db.commit()
-    db.refresh(conversation)
-    messages = get_messages(db, conversation.id)
-    return Conversation(id=str(conversation.id), title=conversation.title, messages=[Message(role=message.role, content=message.content, embedding=message.embedding) for message in messages])
+        response.raise_for_status()
+        response_data = response.json()
+
+        title = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        # Fallback to a default title if we couldn't get one from the API
+        if not title:
+            title = "New Conversation"
+
+        conversation = create_conversation(db, title)
+        db.commit()
+        db.refresh(conversation)
+        messages = get_messages(db, conversation.id)
+        return Conversation(id=str(conversation.id), title=conversation.title, messages=[Message(role=message.role, content=message.content, embedding=message.embedding) for message in messages])
+
+    except requests.exceptions.Timeout:
+        # If API times out, create conversation with a default title
+        conversation = create_conversation(db, "New Conversation")
+        db.commit()
+        db.refresh(conversation)
+        messages = get_messages(db, conversation.id)
+        return Conversation(id=str(conversation.id), title=conversation.title, messages=[Message(role=message.role, content=message.content, embedding=message.embedding) for message in messages])
+
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Error communicating with model provider: {str(e)}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("")
