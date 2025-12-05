@@ -3,7 +3,7 @@
 ## Purpose of this project
 ### Learn
 1. Learn FastAPI, uv, and modern Python conventions
-2. Learn LLM API endpoints and how they work (/chat and /embedding)
+2. Learn LLM API endpoints and how they work (/chat/completions and /embeddings)
 3. Learn how to find relevant data to user message, and inject context before agent response
 4. Learn Svelte
 
