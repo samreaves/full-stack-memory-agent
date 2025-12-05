@@ -1,6 +1,17 @@
 # Learning AI Agents with Memory in Python | The Project
 
-## Objective
+## Purpose of this project
+### Learn
+1. Learn FastAPI, uv, and modern Python conventions
+2. Learn LLM API endpoints and how they work (/chat and /embedding)
+3. Learn how to find relevant data to user message, and inject context before agent response
+4. Learn Svelte
+
+### Demonstrate
+While this is not the cleanest code or perfect example by any means, this is a demonstration of a working ChatGPT clone that can be run locally for free. There are no LLM frameworks such as Langchain or Agent SDK used, so anyone browsing can understand how agentic apps actually work under the hood. An example is included in .env.example that shows which models to run using Ollama or LMStudio to run this without any cost whatsoever (if your hardware can handle it).
+
+
+## Objective (now complete)
 1. Set up a basic server using Python, uv, and FastAPI
 2. Store sessions in memory first
 3. Create an endpoint that receives chat messages, communicates to a model, saves the response, and streams the response back to the client
