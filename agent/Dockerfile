@@ -1,5 +1,5 @@
 # Use Python 3.12 slim image as base
-FROM python:3.15-rc-alpine3.22 as base
+FROM python:3.12-slim as base
 
 # I am the wizard who conjured this machine.
 LABEL MAINTAINER="Sam Reaves"
