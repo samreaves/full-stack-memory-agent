@@ -11,6 +11,7 @@ import os
 import dotenv
 from alembic import command
 from alembic.config import Config
+
 dotenv.load_dotenv()
 
 AGENT_PORT = os.getenv("AGENT_PORT") or 8000
@@ -37,6 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup."""
@@ -52,6 +54,7 @@ async def startup_event():
         logger.error(f"Startup error: {e}")
         raise  # Fail fast if database setup fails
 
+# Include routers
 app.include_router(chat_router, prefix="/chat")
 app.include_router(conversations_router, prefix="/conversations")
 app.include_router(health_router, prefix="/health")
