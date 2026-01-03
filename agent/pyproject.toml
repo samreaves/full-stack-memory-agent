@@ -3,12 +3,16 @@ name = "full-stack-memory-agent"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic>=1.17.1",
+    "arize-phoenix-otel>=0.14.0",
     "dotenv>=0.9.9",
     "fastapi>=0.119.1",
     "numpy>=2.3.4",
+    "openinference-instrumentation>=0.1.42",
+    "openinference-semantic-conventions>=0.1.25",
+    "opentelemetry-api>=1.28.0",
     "pgvector>=0.4.1",
     "psycopg2-binary>=2.9.11",
     "requests>=2.32.5",
